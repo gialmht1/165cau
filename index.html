@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ôn Tập & Thi Thử Anh Văn Điện - Đề 1 (HUIT)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .selected-option { border-color: #3b82f6; background-color: #eff6ff; }
+        .correct-option { border-color: #22c55e !important; background-color: #f0fdf4 !important; color: #15803d; }
+        .incorrect-option { border-color: #ef4444 !important; background-color: #fef2f2 !important; color: #b91c1c; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans pb-12">
+    <!-- Header -->
+    <header class="bg-blue-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div>
+                <h1 class="text-lg font-bold">AVCN Điện - Đề 1 (HUIT)</h1>
+                <p class="text-xs text-blue-200">165 Câu Trắc Nghiệm - Luyện tập & Thi thử</p>
+            </div>
+            <div class="flex gap-2">
+                <button id="gridBtn" onclick="toggleGridModal()" class="bg-blue-600 hover:bg-blue-800 px-3 py-1.5 rounded-lg text-sm flex items-center gap-1 font-medium">
+                    <i class="fas fa-th"></i> Danh sách
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-4">
+        <!-- Settings & Mode Bar -->
+        <div class="bg-white rounded-xl shadow-sm p-4 mb-4 border border-slate-200">
+            <div class="flex flex-wrap justify-between items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-sm font-semibold text-slate-700">Chế độ:</span>
+                    <select id="modeSelect" onchange="changeMode()" class="bg-slate-100 border border-slate-300 text-sm rounded-lg p-2 font-medium">
+                        <option value="practice">Luyện tập (Từng câu)</option>
+                        <option value="exam">Thi thử (50 câu / 60 phút)</option>
+                        <option value="study">Tra cứu tất cả (165 câu)</option>
+                    </select>
+                </div>
+
+                <!-- Filter by CLO -->
+                <div id="cloFilterContainer" class="flex items-center gap-2">
+                    <span class="text-sm font-semibold text-slate-700">Lọc CLO:</span>
+                    <select id="cloSelect" onchange="filterByClo()" class="bg-slate-100 border border-slate-300 text-sm rounded-lg p-2 font-medium">
+                        <option value="ALL">Tất cả CLO</option>
+                        <option value="CLO1">CLO 1</option>
+                        <option value="CLO2">CLO 2</option>
+                        <option value="CLO3">CLO 3</option>
+                    </select>
+                </div>
+                
+                <div id="settingsContainer" class="flex items-center gap-4 text-sm font-medium">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="shuffleQuestions" class="w-4 h-4 text-blue-600 rounded">
+                        <span>Đảo câu hỏi</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="shuffleOptions" class="w-4 h-4 text-blue-600 rounded">
+                        <span>Đảo đáp án</span>
+                    </label>
+                    <button onclick="applySettings()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 text-xs font-bold">
+                        Áp dụng
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Exam Timer Bar -->
+        <div id="examHeader" class="hidden bg-amber-50 border border-amber-200 text-amber-900 p-3 rounded-xl mb-4 flex justify-between items-center font-bold text-sm">
+            <span><i class="fas fa-clock mr-2 text-amber-600"></i> Thời gian còn lại:</span>
+            <span id="timerDisplay" class="text-lg font-bold text-red-600">60:00</span>
+            <button onclick="submitExam()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow">Nộp bài ngay</button>
+        </div>
+
+        <!-- Practice & Exam View -->
+        <div id="practiceView" class="space-y-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <span id="questionTag" class="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded">CLO 1</span>
+                    <span id="questionProgress" class="text-xs text-slate-500 font-bold">Câu 1 / 165</span>
+                </div>
+                
+                <h2 id="questionText" class="text-base sm:text-lg font-bold text-slate-900 mb-6 leading-relaxed">
+                    Đang tải câu hỏi...
+                </h2>
+
+                <div id="optionsContainer" class="space-y-3 mb-6"></div>
+
+                <div id="explanationBox" class="hidden bg-slate-50 border-l-4 border-blue-500 p-4 rounded-r-lg mb-6">
+                    <h4 class="font-bold text-sm text-blue-900 mb-1" id="correctAnswerTitle">Đáp án chính xác</h4>
+                    <p id="explanationText" class="text-sm text-slate-700 leading-relaxed"></p>
+                </div>
+
+                <div class="flex justify-between items-center pt-4 border-t border-slate-100">
+                    <button id="prevBtn" onclick="navigateQuestion(-1)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50">
+                        <i class="fas fa-chevron-left mr-1"></i> Câu trước
+                    </button>
+                    <button id="nextBtn" onclick="navigateQuestion(1)" class="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-lg text-sm font-bold">
+                        Câu tiếp <i class="fas fa-chevron-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Study View (All questions) -->
+        <div id="studyView" class="hidden space-y-4"></div>
+
+        <!-- Exam Result View -->
+        <div id="resultView" class="hidden space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-8 text-center space-y-4 border border-slate-200">
+                <h2 class="text-2xl font-bold text-slate-900">KẾT QUẢ THI THỬ</h2>
+                <div id="scoreDisplay" class="text-4xl font-extrabold text-blue-600">0 / 50</div>
+                <p id="scoreComment" class="text-slate-600 text-sm font-medium"></p>
+                <button onclick="resetExam()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm shadow">Thi thử đề mới (50 câu khác)</button>
+            </div>
+            
+            <div id="reviewContainer" class="space-y-4"></div>
+        </div>
+    </main>
+
+    <!-- Grid Modal -->
+    <div id="gridModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col">
+            <div class="p-4 border-b border-slate-200 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800">Danh sách câu hỏi</h3>
+                <button onclick="toggleGridModal()" class="text-slate-400 hover:text-slate-600">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="gridContainer" class="p-4 overflow-y-auto grid grid-cols-5 sm:grid-cols-10 gap-2"></div>
+        </div>
+    </div>
+
+    <script>
+        const RAW_DATA = [
+            { id: 1, clo: "CLO1", q: "What is an electrical circuit?", opt: ["A device that generates electricity", "A device that stores electricity", "A path along which electric current can flow", "A device that measures electricity"], ans: "A path along which electric current can flow", exp: "Mạch điện là một đường dẫn kín cho dòng điện chạy qua." },
+            { id: 2, clo: "CLO1", q: "What is the purpose of a circuit breaker in an electrical system?", opt: ["To convert AC power to DC power", "To regulate voltage", "To control current flow", "To protect electrical circuits from overcurrent and short circuits"], ans: "To protect electrical circuits from overcurrent and short circuits", exp: "Aptomat (circuit breaker) dùng để bảo vệ mạch điện khỏi quá dòng và ngắn mạch." },
+            { id: 3, clo: "CLO1", q: "Which type of circuit is used to convert AC power to DC power?", opt: ["Rectifier circuit", "Amplifier circuit", "Filter circuit", "Oscillator circuit"], ans: "Rectifier circuit", exp: "Mạch chỉnh lưu (Rectifier circuit) biến đổi dòng xoay chiều (AC) thành một chiều (DC)." },
+            { id: 4, clo: "CLO1", q: "What is a transistor made up of", opt: ["Chip", "Insulator", "Semiconductor", "Metal"], ans: "Semiconductor", exp: "Transistor được cấu tạo từ chất bán dẫn (Semiconductor)." },
+            { id: 5, clo: "CLO1", q: "Anode is ________ polarity in diodes", opt: ["Negative", "Positive", "Ground", "Hot side"], ans: "Positive", exp: "Anode là cực dương (Positive) của diode." },
+            { id: 6, clo: "CLO1", q: "Which of the following is made of semiconductors?", opt: ["Diode", "Resistor", "Capacitor", "Inductor"], ans: "Diode", exp: "Diode là linh kiện làm từ chất bán dẫn." },
+            { id: 7, clo: "CLO1", q: "What is the purpose of a diode?", opt: ["To convert AC to DC", "To convert DC to AC", "To regulate voltage levels", "To allow current to flow in only one direction"], ans: "To allow current to flow in only one direction", exp: "Chức năng chính của diode là chỉ cho dòng điện chạy theo một chiều." },
+            { id: 8, clo: "CLO1", q: "The output is true if either of the input is true. This statement represents", opt: ["NAND gate", "OR gate", "AND gate", "XOR gate"], ans: "XOR gate", exp: "Cổng XOR cho đầu ra True khi một trong hai đầu vào là True." },
+            { id: 9, clo: "CLO1", q: "Which of the following is made up of semiconductors?", opt: ["Transistor", "Resistor", "Capacitor", "Inductor"], ans: "Transistor", exp: "Transistor là linh kiện cấu tạo từ bán dẫn." },
+            { id: 10, clo: "CLO1", q: "Which of the following gate is called an inverter", opt: ["NOT gate", "OR gate", "AND gate", "NAND gate"], ans: "NOT gate", exp: "Cổng NOT còn được gọi là cổng đảo (Inverter)." },
+            { id: 11, clo: "CLO1", q: "Which of the following is not a logic gate?", opt: ["NAND gate", "IF gate", "AND gate", "XOR gate"], ans: "IF gate", exp: "IF gate không phải là cổng logic chuẩn." },
+            { id: 12, clo: "CLO1", q: "The ________ is the quantity or condition that is varied by the controller so as to affect the value of the controlled variable.", opt: ["controlled variable", "control signal", "control system", "controller"], ans: "control signal", exp: "Tín hiệu điều khiển (control signal) do bộ điều khiển thay đổi để tác động lên biến được điều khiển." },
+            { id: 13, clo: "CLO1", q: "What is/are the advantage(s) of an open-loop control system?", opt: ["Simple", "Economical", "Low maintenance", "All of the above"], ans: "All of the above", exp: "Hệ thống vòng mở có ưu điểm: đơn giản, kinh tế và ít bảo trì." },
+            { id: 14, clo: "CLO1", q: "What is/are the advantage(s) of closed-loop control systems?", opt: ["Reliable", "Fast", "Optimizable", "All of the above"], ans: "All of the above", exp: "Hệ thống vòng kín tin cậy, nhanh và tối ưu hóa tốt." },
+            { id: 15, clo: "CLO1", q: "Which of the following should be done before working on electrical equipment?", opt: ["Wear insulated gloves", "Use a metal ladder", "Keep the equipment plugged in", "Stand on a wet surface"], ans: "Wear insulated gloves", exp: "Trước khi làm việc với thiết bị điện cần đeo găng tay cách điện." },
+            { id: 16, clo: "CLO1", q: "Which of the following should be done before working on electrical equipment?", opt: ["Wear insulated gloves", "Use a metal ladder", "Keep the equipment plugged in", "Stand on a wet surface"], ans: "Wear insulated gloves", exp: "Đeo găng tay cách điện bảo đảm an toàn." },
+            { id: 17, clo: "CLO1", q: "Which of the following should be used to disconnect power to electrical equipment before servicing?", opt: ["Screwdriver", "Pliers", "Circuit breaker", "Hammer"], ans: "Circuit breaker", exp: "Dùng Aptomat/Cầu dao để ngắt điện thiết bị trước khi sửa chữa." },
+            { id: 18, clo: "CLO1", q: "In induction motor, greater the number of poles", opt: ["Lesser the speed", "Greater the speed", "Lesser the frequency", "All of these"], ans: "Lesser the speed", exp: "Số cực càng nhiều thì tốc độ quay càng giảm ($N_s = 60f/p$)." },
+            { id: 19, clo: "CLO1", q: "Principal types of DC machine", opt: ["Shunt motors, series motors and compound motors", "Series motors and compound motors", "Compound motors", "None of the above"], ans: "Shunt motors, series motors and compound motors", exp: "Các loại máy điện DC chính gồm: Động cơ song song, nối tiếp và hỗn hợp." },
+            { id: 20, clo: "CLO1", q: "In the following motor, external resistance can be added to start the motor", opt: ["Slip ring induction motor", "Squirrel cage induction motor", "Salient pole synchronous motor", "Wound rotor synchronous motor"], ans: "Slip ring induction motor", exp: "Động cơ cảm ứng vành trượt cho phép thêm điện trở ngoài khi khởi động." },
+            { id: 21, clo: "CLO1", q: "If in a 3-phase induction motor, two phases open accidentally, the motor will", opt: ["Run at dangerously high speed", "Stop", "Continue to run depending on load", "None of these"], ans: "Stop", exp: "Nếu mất 2 pha, động cơ 3 pha sẽ ngừng hoạt động." },
+            { id: 22, clo: "CLO1", q: "In a 3-phase squirrel cage induction motor", opt: ["Rotor conductors are short circuited through end rings", "Rotor conductor ends are short circuited through slip rings", "Rotor conductors are kept open", "None of the above"], ans: "Rotor conductors are short circuited through end rings", exp: "Ở động cơ lồng sóc, thanh dẫn rôto nối ngắn mạch bằng 2 vòng ngắn mạch ở hai đầu." },
+            { id: 23, clo: "CLO1", q: "The stator of 3 phase induction motor has 3 slots per pole per phase. If supply frequency is 50Hz, Calculate speed of the rotating stator flux", opt: ["500 rpm", "900 rpm", "800 rpm", "1000 rpm"], ans: "1000 rpm", exp: "Số cực = 6 $\rightarrow$ Tốc độ từ trường quay $N_s = 120 \times 50 / 6 = 1000$ rpm." },
+            { id: 24, clo: "CLO3", q: "In solar-thermal power plants, the solar energy is collected by thousands of ________ called heliostats...", opt: ["turbine generator", "sun-tracking mirrors", "solar photovoltaic", "boiler"], ans: "sun-tracking mirrors", exp: "Gương định hướng mặt trời (sun-tracking mirrors) gọi là heliostats." },
+            { id: 25, clo: "CLO3", q: "The hot molten salt is stored in a storage tank, and is used, when needed, to generate steam and drive the", opt: ["turbine generator", "sun-tracking mirrors", "solar photovoltaic", "boiler"], ans: "turbine generator", exp: "Hơi nước dùng để chạy máy phát tua-bin (turbine generator)." },
+            { id: 26, clo: "CLO1", q: "How do you write the number \"1,000,000\" in words?", opt: ["One hundred thousand", "One billion", "One million", "Ten thousand"], ans: "One million", exp: "1,000,000 đọc là One million." },
+            { id: 27, clo: "CLO1", q: "What is the correct way to read \"250\" in standard British English?", opt: ["Two hundred fifty", "Two hundred and fifty", "Two fifty", "Two hundreds and fifty"], ans: "Two hundred and fifty", exp: "Tiếng Anh-Anh đọc 250 là 'Two hundred and fifty'." },
+            { id: 28, clo: "CLO1", q: "Which of the following is the correct way to read the decimal \"0.05\"?", opt: ["Zero point zero five", "Nought point nought five", "Point zero five", "All of the above"], ans: "All of the above", exp: "Tất cả các cách đọc 0.05 đều đúng." },
+            { id: 29, clo: "CLO1", q: "How do you read the percentage \"15%\"?", opt: ["Fifteen percent", "Fifteen percentage", "Fifteen per cents", "Fifteen percents"], ans: "Fifteen percent", exp: "15% đọc là Fifteen percent." },
+            { id: 30, clo: "CLO1", q: "\"Hz\" is the abbreviation for Hertz. What does Hertz measure?", opt: ["Voltage", "Resistance", "Frequency", "Capacitance"], ans: "Frequency", exp: "Hertz (Hz) đo tần số." },
+            { id: 31, clo: "CLO1", q: "1000 millivolts (mV) is equal to:", opt: ["1 Volt (V)", "10 Volts (V)", "100 Volts (V)", "0.1 Volts (V)"], ans: "1 Volt (V)", exp: "1000 mV = 1 V." },
+            { id: 32, clo: "CLO1", q: "Which of the following materials is widely used as a semiconductor?", opt: ["Rubber", "Glass", "Silicon", "Copper"], ans: "Silicon", exp: "Silicon là chất bán dẫn phổ biến nhất." },
+            { id: 33, clo: "CLO1", q: "Which instrument is used to measure electrical current?", opt: ["Voltmeter", "Ohmmeter", "Ammeter", "Wattmeter"], ans: "Ammeter", exp: "Ampe kế dùng để đo dòng điện." },
+            { id: 34, clo: "CLO1", q: "What is required for electric current to flow?", opt: ["An open circuit", "A closed circuit", "A switch", "A resistor"], ans: "A closed circuit", exp: "Dòng điện chỉ chạy qua một mạch kín (closed circuit)." },
+            { id: 35, clo: "CLO1", q: "What are conductors typically made of?", opt: ["Plastic", "Rubber", "Copper", "Glass"], ans: "Copper", exp: "Vật liệu dẫn điện thường làm từ đồng (Copper)." },
+            { id: 36, clo: "CLO1", q: "What is the function of a switch?", opt: ["To provide power", "To resist current", "To open or close a circuit", "To measure voltage"], ans: "To open or close a circuit", exp: "Công tắc dùng để đóng hoặc ngắt mạch điện." },
+            { id: 37, clo: "CLO1", q: "What is another name for a load?", opt: ["Conductor", "Switch", "Resistor", "Cell"], ans: "Resistor", exp: "Tải điện còn có thể gọi là điện trở tiêu thụ." },
+            { id: 38, clo: "CLO1", q: "What is the power source in a simple electrical circuit?", opt: ["Load", "Switch", "Cell", "Conductor"], ans: "Cell", exp: "Nguồn điện trong mạch đơn giản là pin/cell." },
+            { id: 39, clo: "CLO1", q: "What is a battery?", opt: ["A single cell", "Two or more cells", "A type of resistor", "A type of switch"], ans: "Two or more cells", exp: "Ắc quy/Bộ pin bao gồm 2 hoặc nhiều cell ghép lại." },
+            { id: 40, clo: "CLO1", q: "What happens if one component breaks in a series circuit?", opt: ["The other components keep working", "The entire circuit stops working", "The current increases", "The voltage increases"], ans: "The entire circuit stops working", exp: "Mạch nối tiếp bị đứt 1 linh kiện thì toàn bộ mạch ngừng hoạt động." },
+            { id: 41, clo: "CLO1", q: "What does an ammeter measure?", opt: ["Voltage", "Current", "Resistance", "Power"], ans: "Current", exp: "Ampe kế đo dòng điện (Current)." },
+            { id: 42, clo: "CLO1", q: "What type of circuit elements are diodes and transistors?", opt: ["Linear", "Nonlinear", "Resistive", "Capacitive"], ans: "Nonlinear", exp: "Diode và Transistor là phần tử phi tuyến (Nonlinear)." },
+            { id: 43, clo: "CLO1", q: "What does a diode primarily allow?", opt: ["Bidirectional current flow", "Unidirectional current flow", "Voltage flow", "Resistance"], ans: "Unidirectional current flow", exp: "Diode cho phép dòng điện chạy 1 chiều." },
+            { id: 44, clo: "CLO1", q: "What happens to a diode when the reverse voltage exceeds a certain limit?", opt: ["It conducts normally", "It stops conducting", "Reverse breakdown occurs", "It becomes an open circuit"], ans: "Reverse breakdown occurs", exp: "Khi điện áp ngược vượt quá giới hạn sẽ xảy ra hiện tượng đánh thủng ngược." },
+            { id: 45, clo: "CLO1", q: "What is the simplest form of a diode?", opt: ["Transistor", "P-N junction", "Capacitor", "Inductor"], ans: "P-N junction", exp: "Dạng đơn giản nhất của diode là mối nối P-N." },
+            { id: 46, clo: "CLO1", q: "What is another term for an arrangement of diodes that converts AC to DC?", opt: ["Amplifier", "Oscillator", "Rectifier", "Filter"], ans: "Rectifier", exp: "Bộ biến đổi AC thành DC bằng diode gọi là Mạch chỉnh lưu (Rectifier)." },
+            { id: 47, clo: "CLO1", q: "What does the term \"diode\" mean?", opt: ["One electrode device", "Two electrode device", "Three electrode device", "Semiconductor device"], ans: "Two electrode device", exp: "Diode nghĩa là linh kiện có 2 cực (Two electrode)." },
+            { id: 48, clo: "CLO1", q: "What is a trivalent impurity also known as?", opt: ["Donor impurity", "Acceptor impurity", "Neutral impurity", "Semiconductor impurity"], ans: "Acceptor impurity", exp: "Tạp chất tam giá (trivalent) còn gọi là tạp chất Nhận (Acceptor impurity)." },
+            { id: 49, clo: "CLO1", q: "What is a pentavalent impurity also known as?", opt: ["Acceptor impurity", "Donor impurity", "Neutral impurity", "Superconductor impurity"], ans: "Donor impurity", exp: "Tạp chất ngũ giá (pentavalent) còn gọi là tạp chất Cho (Donor impurity)." },
+            { id: 50, clo: "CLO1", q: "What is the P-type region of a diode called?", opt: ["Cathode", "Anode", "Base", "Emitter"], ans: "Anode", exp: "Vùng loại P của diode gọi là Anode." },
+            { id: 51, clo: "CLO1", q: "What is the N-type region of a diode called?", opt: ["Anode", "Cathode", "Collector", "Gate"], ans: "Cathode", exp: "Vùng loại N của diode gọi là Cathode." },
+            { id: 52, clo: "CLO1", q: "What does a control system consist of?", opt: ["Individual components", "Components acting together", "Unrelated parts", "Static elements"], ans: "Components acting together", exp: "Hệ thống điều khiển gồm các thành phần kết hợp hoạt động cùng nhau." },
+            { id: 53, clo: "CLO1", q: "What is another term for a control signal?", opt: ["Controlled variable", "Manipulated variable", "Output variable", "Input variable"], ans: "Manipulated variable", exp: "Tín hiệu điều khiển còn gọi là Biến can thiệp (Manipulated variable)." },
+            { id: 54, clo: "CLO1", q: "What are enclosures and barriers primarily used for?", opt: ["To conduct electricity efficiently", "To prevent persons from touching live parts", "To increase voltage levels", "To generate power"], ans: "To prevent persons from touching live parts", exp: "Vỏ bọc và rào chắn ngăn con người chạm vào phần mang điện." },
+            { id: 55, clo: "CLO1", q: "What are 3-phase induction motors widely used in?", opt: ["Electronics", "Industry", "Communications", "Computers"], ans: "Industry", exp: "Động cơ cảm ứng 3 pha được dùng rộng rãi trong Công nghiệp (Industry)." },
+            { id: 56, clo: "CLO1", q: "Are 3-phase induction motors simple or complex in construction?", opt: ["Complex", "Simple", "Very complex", "Moderately complex"], ans: "Simple", exp: "Cấu tạo động cơ cảm ứng 3 pha đơn giản (Simple)." },
+            { id: 57, clo: "CLO1", q: "In terms of cost, 3-phase induction motors are generally:", opt: ["Very expensive", "Moderately expensive", "Low-priced (Cheap)", "Extremely expensive"], ans: "Low-priced (Cheap)", exp: "Giá thành của động cơ cảm ứng 3 pha rẻ." },
+            { id: 58, clo: "CLO1", q: "How much maintenance do 3-phase induction motors require?", opt: ["A lot", "Some", "Little", "Constant"], ans: "Little", exp: "Động cơ cảm ứng 3 pha đòi hỏi rất ít bảo trì (Little)." },
+            { id: 59, clo: "CLO1", q: "Do 3-phase induction motors have self-starting torque?", opt: ["No", "Yes", "Sometimes", "Only with load"], ans: "Yes", exp: "Động cơ cảm ứng 3 pha có mô-men tự khởi động." },
+            { id: 60, clo: "CLO1", q: "What is a disadvantage of 3-phase induction motors regarding speed control?", opt: ["Speed can be changed easily", "Speed is essentially constant and cannot be changed easily", "Speed is too high", "Speed is too low"], ans: "Speed is essentially constant and cannot be changed easily", exp: "Nhược điểm là tốc độ gần như cố định, khó thay đổi mượt mà." },
+            { id: 61, clo: "CLO1", q: "What type of energy do hydroelectric power plants convert into electrical energy?", opt: ["Thermal energy", "Chemical energy", "Hydraulic potential energy", "Nuclear energy"], ans: "Hydraulic potential energy", exp: "Thủy điện biến thế năng của nước thành điện năng." },
+            { id: 62, clo: "CLO1", q: "What rotates the vanes of the turbine in a hydroelectric plant?", opt: ["Air", "Steam", "Water", "Molten salt"], ans: "Water", exp: "Nước làm quay cánh tua-bin." },
+            { id: 63, clo: "CLO3", q: "After doing useful work in the turbine, the water is released through the:", opt: ["Penstock", "Head race", "Spillway", "Tail race"], ans: "Tail race", exp: "Nước sau khi qua tua-bin thoát ra qua Kênh xả (Tail race)." },
+            { id: 64, clo: "CLO1", q: "In India, coals are generally classified into which grades?", opt: ["1-10", "A-G", "I-V", "X-Z"], ans: "A-G", exp: "Than đá ở Ấn Độ phân thành các mác từ A đến G." },
+            { id: 65, clo: "CLO1", q: "Among the following types of coal, which usually has the highest calorific value?", opt: ["Peat", "Lignite", "Bituminous", "Anthracite"], ans: "Anthracite", exp: "Than Anthracite có nhiệt trị cao nhất." },
+            { id: 66, clo: "CLO2", q: "What is an electric motor?", opt: ["A device that converts mechanical energy into electrical energy", "A device that converts electrical energy into mechanical energy", "A device that stores electrical energy", "A device that measures electrical energy"], ans: "A device that converts electrical energy into mechanical energy", exp: "Động cơ điện biến điện năng thành cơ năng." },
+            { id: 67, clo: "CLO2", q: "What is an electrical fuse?", opt: ["A device that converts electrical energy into mechanical energy", "A device that stores electrical energy", "A device that measures electrical energy", "A device that protects electrical circuits from overcurrent"], ans: "A device that protects electrical circuits from overcurrent", exp: "Cầu chì bảo vệ mạch điện khỏi quá dòng." },
+            { id: 68, clo: "CLO2", q: "What is an electrical circuit breaker?", opt: ["A device that converts electrical energy into mechanical energy", "A device that stores electrical energy", "A device that measures electrical energy", "A device that interrupts electrical current when it exceeds a safe level"], ans: "A device that interrupts electrical current when it exceeds a safe level", exp: "Aptomat ngắt dòng điện khi vượt quá ngưỡng an toàn." },
+            { id: 69, clo: "CLO2", q: "What is electrical resistance?", opt: ["The ability of a material to conduct electricity", "The ability of a material to store electricity", "The ability of a material to oppose the flow of electricity", "The ability of a material to measure electricity"], ans: "The ability of a material to oppose the flow of electricity", exp: "Điện trở là khả năng cản trở dòng điện." },
+            { id: 70, clo: "CLO2", q: "What is an electrical load?", opt: ["A device that generates electricity", "A device that stores electricity", "A device that measures electricity", "A device that consumes electrical energy"], ans: "A device that consumes electrical energy", exp: "Tải điện là thiết bị tiêu thụ điện năng." },
+            { id: 71, clo: "CLO2", q: "What is a capacitor?", opt: ["A device that stores electrical energy", "A device that regulates electrical energy", "A device that converts AC to DC", "A device that converts DC to AC"], ans: "A device that stores electrical energy", exp: "Tụ điện là thiết bị tích trữ năng lượng điện." },
+            { id: 72, clo: "CLO2", q: "What is a transformer?", opt: ["A device that converts AC to DC", "A device that stores electrical energy", "A device that regulates electrical energy", "A device that changes the voltage level of an alternating current"], ans: "A device that changes the voltage level of an alternating current", exp: "Máy biến áp biến đổi điện áp dòng điện xoay chiều." },
+            { id: 73, clo: "CLO2", q: "What is an oscilloscope?", opt: ["A device that measures electrical energy", "A device that stores electrical energy", "A device that amplifies or switches electrical signals", "A device that displays waveforms of electrical signals"], ans: "A device that displays waveforms of electrical signals", exp: "Máy hiện sóng hiển thị dạng sóng của tín hiệu điện." },
+            { id: 74, clo: "CLO2", q: "What is a wattmeter?", opt: ["A device that measures electrical energy", "A device that stores electrical energy", "A device that amplifies or switches electrical signals", "A device that regulates electrical energy"], ans: "A device that measures electrical energy", exp: "Oát kế dùng để đo công suất/năng lượng điện." },
+            { id: 75, clo: "CLO2", q: "Which unit of measurement is used for electrical power?", opt: ["Ohms", "Watts", "Amperes", "Volts"], ans: "Watts", exp: "Đơn vị đo công suất điện là Watt (W)." },
+            { id: 76, clo: "CLO2", q: "Which device is used to measure electrical current in a circuit?", opt: ["Voltmeter", "Ammeter", "Ohmmeter", "Wattmeter"], ans: "Ammeter", exp: "Ampe kế đo dòng điện." },
+            { id: 77, clo: "CLO2", q: "The relation between Power, Resistance, and Current is", opt: ["P = I^2 / R", "P = I^2 * R", "P = V * I^2", "None of the above"], ans: "P = I^2 * R", exp: "Công suất $P = I^2 \times R$." },
+            { id: 78, clo: "CLO2", q: "A multimeter measures", opt: ["Current", "Voltage", "Resistance", "Current, voltage, and resistance"], ans: "Current, voltage, and resistance", exp: "Đồng hồ vạn năng đo dòng điện, điện áp và điện trở." },
+            { id: 79, clo: "CLO2", q: "An ammeter is an electrical instrument used to measure", opt: ["Current", "Voltage", "Resistance", "None of the above"], ans: "Current", exp: "Ampe kế dùng đo dòng điện." },
+            { id: 80, clo: "CLO2", q: "An ohmmeter is an instrument for measuring", opt: ["Current", "Voltage", "Resistance", "None of the above"], ans: "Resistance", exp: "Om kế đo điện trở." },
+            { id: 81, clo: "CLO2", q: "A Voltmeters measures", opt: ["Current", "Voltage", "Resistance", "None of the above"], ans: "Voltage", exp: "Vôn kế đo điện áp." },
+            { id: 82, clo: "CLO2", q: "A Wattmeter measures", opt: ["Current", "Voltage", "Resistance", "Power"], ans: "Power", exp: "Oát kế đo công suất." },
+            { id: 83, clo: "CLO2", q: "What is an electrical ground?", opt: ["A source of electrical power", "A device that measures electrical energy", "A point of zero electrical potential", "A device that stores electrical energy"], ans: "A point of zero electrical potential", exp: "Đất (Ground) là điểm có điện thế bằng 0." },
+            { id: 84, clo: "CLO2", q: "What is the function of a capacitor in an electrical circuit?", opt: ["To store electrical energy", "To convert AC power to DC power", "To regulate voltage", "To control current flow"], ans: "To store electrical energy", exp: "Tụ điện lưu trữ năng lượng điện." },
+            { id: 85, clo: "CLO2", q: "When forward applied voltage is more than forward biased voltage", opt: ["A diodes can convert DC to AC", "A diode will become short circuited", "A diode will blocks current", "A diode will be broken"], ans: "A diode will become short circuited", exp: "Khi điện áp thuận vượt mức ngưỡng, diode dẫn hoàn toàn (ngắn mạch)." },
+            { id: 86, clo: "CLO2", q: "Types of diodes used in lighting system and display", opt: ["LED", "Rectifier diodes", "Zener diodes", "Schottky"], ans: "LED", exp: "Diode phát quang (LED) dùng trong chiếu sáng và hiển thị." },
+            { id: 87, clo: "CLO2", q: "Diode has polarity", opt: ["Anode and cathode", "Output and input", "On and off", "None of the above"], ans: "Anode and cathode", exp: "Diode có hai cực Anode và Cathode." },
+            { id: 88, clo: "CLO2", q: "A diode is a device which only allows ________ flow of current...", opt: ["Unidirectional", "Bidirectional", "Forward", "Reverse"], ans: "Unidirectional", exp: "Diode chỉ cho dòng điện chạy 1 chiều." },
+            { id: 89, clo: "CLO2", q: "A diode only blocks current in the ________ direction...", opt: ["Negative", "Reverse", "Forward", "Positive"], ans: "Reverse", exp: "Diode chặn dòng điện chạy theo chiều ngược (Reverse)." },
+            { id: 90, clo: "CLO2", q: "What is the semiconductor diode used as?", opt: ["Oscillator", "Amplifier", "Rectifier", "Modulator"], ans: "Rectifier", exp: "Diode bán dẫn được dùng làm bộ chỉnh lưu (Rectifier)." },
+            { id: 91, clo: "CLO2", q: "Component that Convert AC to DC and allow current to flow in one Direction", opt: ["Capacitor", "Inductor", "Diode", "Resistor"], ans: "Diode", exp: "Diode nắn dòng AC thành DC." },
+            { id: 92, clo: "CLO2", q: "In diode, the region on either side of the junction which becomes free from mobile charge carriers is called", opt: ["Energy gap region", "Diffusion region", "Charge free region", "Depletion region"], ans: "Depletion region", exp: "Vùng trống không chứa hạt tải điện tự do gọi là Vùng nghèo (Depletion region)." },
+            { id: 93, clo: "CLO2", q: "The reverse saturation current in a PN Junction diode is only due to", opt: ["Majority carriers", "Minority carriers", "Donor ions", "Acceptor ions"], ans: "Minority carriers", exp: "Dòng bão hòa ngược do hạt tải điện thiểu số sinh ra." },
+            { id: 94, clo: "CLO2", q: "Which logic gates output a 1 if their inputs are 0 and 1?", opt: ["Only OR gates", "NAND and OR gates", "NOR and AND gates", "NAND, OR, and XOR gates"], ans: "NAND, OR, and XOR gates", exp: "Đầu vào (0,1) thì các cổng NAND, OR, XOR đều ra 1." },
+            { id: 95, clo: "CLO2", q: "The output will be true when the input codes are different from one another. This statement represents", opt: ["NAND gate", "OR gate", "AND gate", "XOR gate"], ans: "XOR gate", exp: "Cổng XOR ra 1 khi hai đầu vào khác nhau." },
+            { id: 96, clo: "CLO2", q: "The logic expression for a ________ is the same as an OR gate but with an inversion bar...", opt: ["NOR gate", "OR gate", "AND gate", "XOR gate"], ans: "NOR gate", exp: "Cổng NOR là cổng OR có dấu gạch ngang đảo ngược." },
+            { id: 97, clo: "CLO2", q: "The output of an ________ will only be true if all the inputs are true.", opt: ["NOR gate", "OR gate", "AND gate", "XOR gate"], ans: "AND gate", exp: "Cổng AND chỉ ra 1 khi tất cả đầu vào bằng 1." },
+            { id: 98, clo: "CLO2", q: "The ________ is identical to the AND gate with the exception that the output is inverted.", opt: ["NAND gate", "OR gate", "AND gate", "XOR gate"], ans: "NAND gate", exp: "Cổng NAND giống AND nhưng ngõ ra bị đảo ngược." },
+            { id: 99, clo: "CLO2", q: "A ________ gate gives the output as 1 only if all the inputs signals are 1.", opt: ["OR", "AND", "NOR", "NOT"], ans: "AND", exp: "Cổng AND cho ngõ ra 1 chỉ khi các tín hiệu vào đều là 1." },
+            { id: 100, clo: "CLO2", q: "________ is a closed loop system.", opt: ["Auto-pilot for an aircraft", "Direct current generator", "Car starter", "Electric switch"], ans: "Auto-pilot for an aircraft", exp: "Hệ thống lái tự động của máy bay là hệ thống vòng kín." },
+            { id: 101, clo: "CLO2", q: "What is/are the disadvantage(s) of closed-loop control systems?", opt: ["Expensive", "High Maintenance", "Difficult installation", "All of the above"], ans: "All of the above", exp: "Nhược điểm của hệ vòng kín: đắt, bảo trì cao, lắp đặt khó." },
+            { id: 102, clo: "CLO2", q: "The ________ is the quantity or condition that is measured and controlled.", opt: ["controlled variable", "control signal", "control system", "controller"], ans: "controlled variable", exp: "Biến được đo và điều khiển gọi là Controlled variable." },
+            { id: 103, clo: "CLO2", q: "A system that maintains a prescribed relationship between the output and reference input...", opt: ["disturbance", "feedback control system", "plant", "controlled variable"], ans: "feedback control system", exp: "Hệ thống điều khiển phản hồi duy trì mối quan hệ dựa trên so sánh ngõ ra và đầu vào." },
+            { id: 104, clo: "CLO2", q: "________ provide protection in any approaching direction to the equipment by enclosing it", opt: ["Barriers", "Products", "Enclosures", "Instruments"], ans: "Enclosures", exp: "Vỏ bọc (Enclosures) bảo vệ thiết bị từ mọi hướng." },
+            { id: 105, clo: "CLO2", q: "________ may be used around an open-type piece of equipment when access from above is precluded...", opt: ["Barriers", "Products", "Enclosures", "Instruments"], ans: "Barriers", exp: "Rào chắn (Barriers) dùng quanh thiết bị mở." },
+            { id: 106, clo: "CLO2", q: "What is the purpose of grounding electrical systems?", opt: ["To provide a path for current to flow", "To protect against electric shocks", "To reduce electrical resistance", "To increase energy efficiency"], ans: "To protect against electric shocks", exp: "Nối đất hệ thống điện để chống điện giật." },
+            { id: 107, clo: "CLO2", q: "One safe work practice while working around electrical equipment is:", opt: ["Wear jewelry", "Use conductive ladders", "Use insulated tools", "Wear keys or keychains on your clothing"], ans: "Use insulated tools", exp: "Sử dụng dụng cụ cách điện khi làm việc với thiết bị điện." },
+            { id: 108, clo: "CLO2", q: "In an induction motor, rotor speed is always", opt: ["Less than the stator speed", "More than the stator speed", "Equal to the stator speed", "None of these"], ans: "Less than the stator speed", exp: "Tốc độ rôto luôn nhỏ hơn tốc độ từ trường quay của stator." },
+            { id: 109, clo: "CLO2", q: "Which of the following is a major advantage of wind power plants?", opt: ["High initial cost", "Dependency on wind availability", "Renewable energy source", "Complex maintenance"], ans: "Renewable energy source", exp: "Ưu điểm lớn của điện gió là nguồn năng lượng tái tạo." },
+            { id: 110, clo: "CLO2", q: "How is the mathematical expression \"x^2\" spoken?", opt: ["x cubed", "x squared", "x to the second", "double x"], ans: "x squared", exp: "$x^2$ đọc là x squared." },
+            { id: 111, clo: "CLO2", q: "The prefix \"mega\" (M) stands for:", opt: ["One thousand", "One million", "One billion", "One trillion"], ans: "One million", exp: "Mega (M) tương ứng 1 triệu ($10^6$)." },
+            { id: 112, clo: "CLO2", q: "Which instrument is used to measure electrical potential difference (voltage)?", opt: ["Ammeter", "Voltmeter", "Ohmmeter", "Oscilloscope"], ans: "Voltmeter", exp: "Vôn kế đo hiệu điện thế." },
+            { id: 113, clo: "CLO2", q: "In a DC circuit, electrical power (Watts) is calculated using which formula?", opt: ["P = E + I", "P = E * I", "P = E / I", "P = E - I"], ans: "P = E * I", exp: "Công suất $P = E \times I$." },
+            { id: 114, clo: "CLO2", q: "What are diodes and transistors made of?", opt: ["Conductors", "Insulators", "Semiconductors", "Superconductors"], ans: "Semiconductors", exp: "Diode và transistor làm từ chất bán dẫn." },
+            { id: 115, clo: "CLO2", q: "Do 3-phase induction motors run at essentially constant speed?", opt: ["No", "Yes", "Only at no load", "Only at full load"], ans: "Yes", exp: "Động cơ cảm ứng 3 pha chạy ở tốc độ gần như cố định." },
+            { id: 116, clo: "CLO2", q: "What is the speed of a 3-phase induction motor dependent on?", opt: ["Voltage", "Current", "Frequency", "Resistance"], ans: "Frequency", exp: "Tốc độ động cơ phụ thuộc vào Tần số ($N_s = 120f/p$)." },
+            { id: 117, clo: "CLO2", q: "Do 3-phase induction motors have high efficiency?", opt: ["Low", "Moderate", "High", "Very low"], ans: "High", exp: "Động cơ cảm ứng 3 pha có hiệu suất cao (High)." },
+            { id: 118, clo: "CLO3", q: "Which of the following is correct about the power consumed by R1 and R2 connected in series if R1 > R2?", opt: ["R1 will consume more power", "R2 will consume more power", "R1 and R2 consume same power", "Cannot be established"], ans: "R1 will consume more power", exp: "Mắc nối tiếp dòng I như nhau, $P = I^2 R$, nên $R_1 > R_2 \rightarrow P_1 > P_2$." },
+            { id: 119, clo: "CLO3", q: "How many cycles will an AC signal make in 2 seconds if its frequency is 100 Hz?", opt: ["50", "100", "150", "200"], ans: "200", exp: "Số chu kỳ = $100 \text{ Hz} \times 2 \text{ s} = 200$ chu kỳ." },
+            { id: 120, clo: "CLO3", q: "Five 100 Ohm resistors are connected in parallel. If one resistor is removed, total resistance is", opt: ["25 Ohm", "500 Ohm", "100 Ohm", "20 Ohm"], ans: "25 Ohm", exp: "Còn lại 4 điện trở $100\,\Omega$ song song: $R_{td} = 100 / 4 = 25\,\Omega$." },
+            { id: 121, clo: "CLO3", q: "A particular arrangement of diodes can convert AC to pulsating DC...", opt: ["Amplifier", "Converter", "Inverter", "Rectifier"], ans: "Rectifier", exp: "Mạch chỉnh lưu (Rectifier) chuyển AC thành DC gợn sóng." },
+            { id: 122, clo: "CLO3", q: "A bridge type full wave rectifier requires", opt: ["1 diode", "2 diodes", "3 diodes", "4 diodes"], ans: "4 diodes", exp: "Mạch chỉnh lưu cầu toàn sóng cần 4 diode." },
+            { id: 123, clo: "CLO3", q: "The output of an ________ will be true when any of the inputs are true.", opt: ["NOR gate", "OR gate", "AND gate", "XOR gate"], ans: "OR gate", exp: "Cổng OR ra 1 khi bất kỳ ngõ vào nào bằng 1." },
+            { id: 124, clo: "CLO3", q: "Which of the following signifies a NOT gate?", opt: ["1 (input) - 0 (output)", "1,0 (input) - 1 (output)", "0,0 (input) - 0 (output)", "None"], ans: "1 (input) - 0 (output)", exp: "Cổng NOT đảo ngõ vào: 1 thành 0." },
+            { id: 125, clo: "CLO3", q: "The NAND gates output will be low if two inputs are", opt: ["0 and 0", "0 and 1", "1 and 0", "1 and 1"], ans: "1 and 1", exp: "Cổng NAND chỉ xuất 0 khi hai ngõ vào đều bằng 1." },
+            { id: 126, clo: "CLO3", q: "Which of the following gates can function on a single input?", opt: ["NOT gate", "OR gate", "AND gate", "None"], ans: "NOT gate", exp: "Cổng NOT chỉ cần 1 ngõ vào." },
+            { id: 127, clo: "CLO3", q: "A NAND gate's outputs are the ________ of those of an AND gate.", opt: ["Twin", "Sum", "Opposite", "Absolute value"], ans: "Opposite", exp: "Đầu ra cổng NAND ngược lại (opposite) với cổng AND." },
+            { id: 128, clo: "CLO3", q: "In a ________ each and every possible input combination is listed...", opt: ["logic function", "logic gates", "truth table", "none of the above"], ans: "truth table", exp: "Bảng chân trị (truth table) liệt kê tất cả các tổ hợp đầu vào và ngõ ra." },
+            { id: 129, clo: "CLO3", q: "The output of an OR gate will be true when", opt: ["all inputs are true", "all inputs are false", "any of the inputs are true", "None of the above"], ans: "any of the inputs are true", exp: "Cổng OR ra True khi bất kỳ ngõ vào nào True." },
+            { id: 130, clo: "CLO3", q: "The output of an XOR gate will be true when", opt: ["all inputs are true", "the input codes are different from one another", "any inputs are true", "None of the above"], ans: "the input codes are different from one another", exp: "Cổng XOR ra 1 khi các mã ngõ vào khác nhau." },
+            { id: 131, clo: "CLO3", q: "The output of an AND gate will only be true if", opt: ["all the inputs are true", "all the inputs are false", "any of the inputs are true", "None of the above"], ans: "all the inputs are true", exp: "Cổng AND ra 1 khi tất cả ngõ vào là 1." },
+            { id: 132, clo: "CLO3", q: "The output of an XNOR gate will be true when", opt: ["the input codes are equivalent to one another", "any inputs are true", "all inputs are true", "none of the above"], ans: "the input codes are equivalent to one another", exp: "Cổng XNOR ra 1 khi các tín hiệu vào giống hệt nhau." },
+            { id: 133, clo: "CLO3", q: "A ________ is a combination of components that act together and perform a certain objective", opt: ["disturbance", "system", "feedback control", "controller"], ans: "system", exp: "Hệ thống (system) là tập hợp linh kiện hoạt động cùng nhau." },
+            { id: 134, clo: "CLO3", q: "A ________ is a signal that tends to adversely affect the value of the output of a system", opt: ["input", "system", "feedback control", "disturbance"], ans: "disturbance", exp: "Nhiễu (disturbance) là tín hiệu gây ảnh hưởng xấu tới ngõ ra." },
+            { id: 135, clo: "CLO3", q: "A control system in which the control action is somehow dependent on the output is known as", opt: ["closed-loop control system", "open-loop control systems", "disturbance", "controlled variable"], ans: "closed-loop control system", exp: "Hệ thống phụ thuộc ngõ ra là Hệ thống điều khiển vòng kín." },
+            { id: 136, clo: "CLO3", q: "A closed loop system is distinguished from open loop system by which of the following?", opt: ["Servomechanism", "Feedback", "Output pattern", "Input pattern"], ans: "Feedback", exp: "Hệ vòng kín khác hệ vòng mở ở Tín hiệu phản hồi (Feedback)." },
+            { id: 137, clo: "CLO3", q: "Transfer function of a system is used to calculate which of the following?", opt: ["Order of system", "Time constant", "The output for any given input", "Steady state gain"], ans: "The output for any given input", exp: "Hàm truyền dùng để tính đáp ứng ngõ ra với ngõ vào bất kỳ." },
+            { id: 138, clo: "CLO3", q: "The rotor of the induction motor runs", opt: ["at synchronous speed", "above synchronous speed", "below synchronous speed", "Any of the above"], ans: "below synchronous speed", exp: "Rôto động cơ cảm ứng chạy ở tốc độ thấp hơn tốc độ đồng bộ." },
+            { id: 139, clo: "CLO3", q: "Which part will surely tell that given motor is DC motor and not an AC type?", opt: ["Winding", "Shaft", "Commutator", "Stator"], ans: "Commutator", exp: "Cổ góp (Commutator) là đặc trưng khẳng định động cơ DC." },
+            { id: 140, clo: "CLO3", q: "Ns is the synchronous speed and s the slip, then actual running speed of an induction motor will be", opt: ["Ns", "s * Ns", "(1 - s) * Ns", "(Ns - 1) * s"], ans: "(1 - s) * Ns", exp: "Tốc độ thực tế $N = (1 - s) N_s$." },
+            { id: 141, clo: "CLO3", q: "The slip speed of an induction motor may be defined as the", opt: ["Pairs of poles * frequency", "Rotor speed - synchronous speed", "Rotor speed + synchronous speed", "Synchronous speed - rotor speed"], ans: "Synchronous speed - rotor speed", exp: "Tốc độ trượt = $N_s - N$." },
+            { id: 142, clo: "CLO3", q: "The rotor slip in induction motor occurs because", opt: ["weight of rotor is high", "ununiform magnetic field", "friction slow down rotor", "stator's magnetic field attracts rotor"], ans: "stator's magnetic field attracts rotor", exp: "Độ trượt xảy ra do sự tương tác kéo từ trường stator lên rotor." },
+            { id: 143, clo: "CLO3", q: "The current drawn by the armature of DC motor is directly proportional to", opt: ["Torque", "Speed", "The voltage across the terminals", "Cannot be determined"], ans: "Torque", exp: "Dòng điện phần ứng tỉ lệ thuận với Mô-men xoắn (Torque)." },
+            { id: 144, clo: "CLO3", q: "If the speed of a DC shunt motor is increased, the back e.m.f. of the motor will?", opt: ["increase", "decrease", "remain same", "become zero"], ans: "increase", exp: "Tốc độ tăng làm cho sức điện động ngược $E_b$ tăng." },
+            { id: 145, clo: "CLO3", q: "The flux and back e.m.f. Eb in a DC shunt motor are almost constant... Therefore speed will", opt: ["increase", "decrease", "remain constant", "become zero"], ans: "remain constant", exp: "Tốc độ động cơ shunt gần như giữ nguyên không đổi." },
+            { id: 146, clo: "CLO3", q: "The field of induction motor rotor rotates relative to the stator at", opt: ["rotor speed", "synchronous speed", "slip speed", "very low speed"], ans: "synchronous speed", exp: "Từ trường của rôto quay so với stator ở Tốc độ đồng bộ." },
+            { id: 147, clo: "CLO3", q: "A 3-phase squirrel cage motor drawn 10 kW... stator losses 1 kW & 550 W. Efficiency is", opt: ["60%", "90%", "80%", "70%"], ans: "80%", exp: "Hiệu suất động cơ đạt khoảng 80%." },
+            { id: 148, clo: "CLO3", q: "In a three-phase induction motor, iron losses mainly occur in", opt: ["stator winding", "stator core and stator teeth", "rotor core and rotor teeth", "stator and rotor"], ans: "stator core and stator teeth", exp: "Tổn hao sắt chủ yếu xảy ra ở lõi và răng stator." },
+            { id: 149, clo: "CLO3", q: "A rotating magnetic field produced by stator currents rotates at", opt: ["Synchronous speed (Ns)", "Rotor speed (N)", "Speed = Ns - N", "Higher speed"], ans: "Synchronous speed (Ns)", exp: "Từ trường quay của stator quay với Tốc độ đồng bộ ($N_s$)." },
+            { id: 150, clo: "CLO3", q: "The frequency of the induced emf in an induction motor is", opt: ["Greater than supply frequency", "Lesser than supply frequency", "Same as the supply frequency", "None of these"], ans: "Same as the supply frequency", exp: "Tần số suất điện động cảm ứng khi đứng yên bằng tần số nguồn." },
+            { id: 151, clo: "CLO3", q: "A component specifically designed to oppose the flow of electrical current is a:", opt: ["Capacitor", "Inductor", "Resistor", "Diode"], ans: "Resistor", exp: "Điện trở (Resistor) dùng để cản trở dòng điện." },
+            { id: 152, clo: "CLO3", q: "Which component stores electrical energy in an electric field?", opt: ["Resistor", "Capacitor", "Inductor", "Transformer"], ans: "Capacitor", exp: "Tụ điện tích trữ năng lượng trong điện trường." },
+            { id: 153, clo: "CLO3", q: "Which component stores electrical energy in a magnetic field?", opt: ["Resistor", "Capacitor", "Inductor", "Transistor"], ans: "Inductor", exp: "Cuộn cảm (Inductor) tích trữ năng lượng trong từ trường." },
+            { id: 154, clo: "CLO3", q: "A device that allows current to flow in only one direction is called a:", opt: ["Diode", "Resistor", "Switch", "Capacitor"], ans: "Diode", exp: "Diode chỉ cho dòng điện chạy một chiều." },
+            { id: 155, clo: "CLO3", q: "A circuit that has an unbroken path allowing current to flow from the source and back is a:", opt: ["Closed circuit", "Open circuit", "Short circuit", "Broken circuit"], ans: "Closed circuit", exp: "Mạch kín (Closed circuit) tạo đường dẫn không đứt đoạn." },
+            { id: 156, clo: "CLO3", q: "In a series circuit, how are components connected?", opt: ["Side-by-side", "End-to-end", "In parallel", "With branches"], ans: "End-to-end", exp: "Mạch nối tiếp kết nối các linh kiện nối đuôi nhau (End-to-end)." },
+            { id: 157, clo: "CLO3", q: "In a parallel circuit, how are components arranged?", opt: ["End-to-end", "In a line", "On branches", "One after the other"], ans: "On branches", exp: "Mạch song song arranged trên các nhánh (On branches)." },
+            { id: 158, clo: "CLO3", q: "Identify the voice used in this sentence: \"Electrical energy is measured in watt-hours.\"", opt: ["Active Voice", "Passive Voice", "Imperative", "Subjunctive"], ans: "Passive Voice", exp: "'is measured' là thể Bị động (Passive Voice)." },
+            { id: 159, clo: "CLO3", q: "Identify the voice used in this sentence: \"The other piece connects the load back to the power source.\"", opt: ["Active Voice", "Passive Voice", "Infinitive", "Conditional"], ans: "Active Voice", exp: "'connects' là thể Chủ động (Active Voice)." },
+            { id: 160, clo: "CLO3", q: "Which instrument is specifically designed for detecting and measuring small electric currents?", opt: ["Wattmeter", "Ohmmeter", "Frequency counter", "Galvanometer"], ans: "Galvanometer", exp: "Điện kế (Galvanometer) dùng phát hiện dòng điện cực nhỏ." },
+            { id: 161, clo: "CLO3", q: "What type of impurity is doped into the P-region of a P-N junction diode?", opt: ["Donor impurity", "Acceptor impurity", "Neutral impurity", "Semiconductor impurity"], ans: "Acceptor impurity", exp: "Vùng P được pha tạp chất Nhận (Acceptor impurity)." },
+            { id: 162, clo: "CLO3", q: "What process occurs due to the concentration gradient in a P-N junction?", opt: ["Induction", "Diffusion", "Conduction", "Resistance"], ans: "Diffusion", exp: "Hiện tượng khuếch tán (Diffusion) xảy ra do chênh lệch nồng độ." },
+            { id: 163, clo: "CLO3", q: "What does a controller do to the control signal?", opt: ["Measures it", "Keeps it constant", "Varies it", "Ignores it"], ans: "Varies it", exp: "Bộ điều khiển làm thay đổi (Varies) tín hiệu điều khiển." },
+            { id: 164, clo: "CLO3", q: "Which of the following can be considered a plant?", opt: ["Chemical process", "Economic system", "Heating furnace", "Biological system"], ans: "Heating furnace", exp: "Lò nhiệt (Heating furnace) được xem là đối tượng điều khiển (plant)." },
+            { id: 165, clo: "CLO3", q: "Which of the following is an example of a live part?", opt: ["Metal enclosure", "Insulator", "Energized conductor", "Ground wire"], ans: "Energized conductor", exp: "Dây dẫn mang điện (Energized conductor) là một phần tử mang điện tích (live part)." }
+        ];
+
+        let currentQuestions = [...RAW_DATA];
+        let currentIndex = 0;
+        let userAnswers = {};
+        let examTimer = null;
+        let timeLeft = 60 * 60;
+
+        function init() {
+            filterByClo();
+        }
+
+        function filterByClo() {
+            const cloVal = document.getElementById('cloSelect').value;
+            if (cloVal === 'ALL') {
+                currentQuestions = [...RAW_DATA];
+            } else {
+                currentQuestions = RAW_DATA.filter(q => q.clo === cloVal);
+            }
+            currentIndex = 0;
+            userAnswers = {};
+            renderQuestion();
+            renderGrid();
+        }
+
+        function applySettings() {
+            const doShuffleQ = document.getElementById('shuffleQuestions').checked;
+            const doShuffleO = document.getElementById('shuffleOptions').checked;
+            const cloVal = document.getElementById('cloSelect').value;
+
+            let data = cloVal === 'ALL' ? [...RAW_DATA] : RAW_DATA.filter(q => q.clo === cloVal);
+            data = JSON.parse(JSON.stringify(data));
+            
+            if (doShuffleQ) data.sort(() => Math.random() - 0.5);
+            if (doShuffleO) {
+                data.forEach(q => q.opt.sort(() => Math.random() - 0.5));
+            }
+
+            currentQuestions = data;
+            currentIndex = 0;
+            userAnswers = {};
+            renderQuestion();
+            renderGrid();
+            
+            const mode = document.getElementById('modeSelect').value;
+            if (mode === 'study') renderStudyView();
+        }
+
+        function renderQuestion() {
+            if (currentQuestions.length === 0) {
+                document.getElementById('questionText').innerText = "Không có câu hỏi nào trong phần này.";
+                document.getElementById('optionsContainer').innerHTML = "";
+                return;
+            }
+
+            const q = currentQuestions[currentIndex];
+            document.getElementById('questionProgress').innerText = `Câu ${currentIndex + 1} / ${currentQuestions.length}`;
+            document.getElementById('questionTag').innerText = q.clo;
+            document.getElementById('questionText').innerText = `Câu ${q.id}: ${q.q}`;
+
+            const container = document.getElementById('optionsContainer');
+            container.innerHTML = '';
+
+            const selected = userAnswers[currentIndex];
+            const labels = ['A', 'B', 'C', 'D'];
+
+            q.opt.forEach((optText, idx) => {
+                const letter = labels[idx];
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left p-3.5 rounded-xl border border-slate-200 hover:border-blue-400 transition flex items-start gap-3 bg-white font-medium text-slate-800 text-sm sm:text-base`;
+                
+                if (selected !== undefined) {
+                    if (optText === q.ans) btn.classList.add('correct-option');
+                    else if (idx === selected) btn.classList.add('incorrect-option');
+                }
+
+                btn.onclick = () => selectOption(idx, optText);
+                btn.innerHTML = `
+                    <span class="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5 border border-slate-300">${letter}</span>
+                    <span class="flex-grow">${optText}</span>
+                `;
+                container.appendChild(btn);
+            });
+
+            const expBox = document.getElementById('explanationBox');
+            if (selected !== undefined) {
+                expBox.classList.remove('hidden');
+                document.getElementById('correctAnswerTitle').innerText = `Đáp án đúng: ${q.ans}`;
+                document.getElementById('explanationText').innerText = q.exp;
+            } else {
+                expBox.classList.add('hidden');
+            }
+
+            document.getElementById('prevBtn').disabled = currentIndex === 0;
+            document.getElementById('nextBtn').disabled = currentIndex === currentQuestions.length - 1;
+        }
+
+        function selectOption(optIndex, optText) {
+            if (userAnswers[currentIndex] !== undefined) return;
+            userAnswers[currentIndex] = optIndex;
+            renderQuestion();
+            renderGrid();
+        }
+
+        function navigateQuestion(step) {
+            currentIndex += step;
+            if (currentIndex < 0) currentIndex = 0;
+            if (currentIndex >= currentQuestions.length) currentIndex = currentQuestions.length - 1;
+            renderQuestion();
+        }
+
+        function changeMode() {
+            const mode = document.getElementById('modeSelect').value;
+            const examHeader = document.getElementById('examHeader');
+            const practiceView = document.getElementById('practiceView');
+            const studyView = document.getElementById('studyView');
+            const resultView = document.getElementById('resultView');
+            const cloFilterContainer = document.getElementById('cloFilterContainer');
+            const settingsContainer = document.getElementById('settingsContainer');
+
+            clearInterval(examTimer);
+            resultView.classList.add('hidden');
+
+            if (mode === 'study') {
+                examHeader.classList.add('hidden');
+                practiceView.classList.add('hidden');
+                studyView.classList.remove('hidden');
+                cloFilterContainer.classList.remove('hidden');
+                settingsContainer.classList.remove('hidden');
+                renderStudyView();
+            } else if (mode === 'exam') {
+                examHeader.classList.remove('hidden');
+                studyView.classList.add('hidden');
+                practiceView.classList.remove('hidden');
+                cloFilterContainer.classList.add('hidden');
+                settingsContainer.classList.add('hidden');
+                
+                let shuffled = JSON.parse(JSON.stringify(RAW_DATA));
+                shuffled.sort(() => Math.random() - 0.5);
+                currentQuestions = shuffled.slice(0, 50);
+                
+                currentQuestions.forEach(q => q.opt.sort(() => Math.random() - 0.5));
+
+                startExamTimer();
+                userAnswers = {};
+                currentIndex = 0;
+                renderQuestion();
+                renderGrid();
+            } else {
+                examHeader.classList.add('hidden');
+                studyView.classList.add('hidden');
+                practiceView.classList.remove('hidden');
+                cloFilterContainer.classList.remove('hidden');
+                settingsContainer.classList.remove('hidden');
+                filterByClo();
+            }
+        }
+
+        function startExamTimer() {
+            timeLeft = 60 * 60;
+            updateTimerDisplay();
+            examTimer = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(examTimer);
+                    submitExam();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const m = Math.floor(timeLeft / 60);
+            const s = timeLeft % 60;
+            document.getElementById('timerDisplay').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function submitExam() {
+            clearInterval(examTimer);
+            let correctCount = 0;
+            currentQuestions.forEach((q, idx) => {
+                const userOptIdx = userAnswers[idx];
+                if (userOptIdx !== undefined && q.opt[userOptIdx] === q.ans) {
+                    correctCount++;
+                }
+            });
+
+            document.getElementById('practiceView').classList.add('hidden');
+            document.getElementById('examHeader').classList.add('hidden');
+            const resultView = document.getElementById('resultView');
+            resultView.classList.remove('hidden');
+            
+            document.getElementById('scoreDisplay').innerText = `${correctCount} / ${currentQuestions.length}`;
+            const percent = (correctCount / currentQuestions.length) * 100;
+            document.getElementById('scoreComment').innerText = percent >= 80 ? "Xuất sắc! Đạt điểm rất cao." : percent >= 50 ? "Khá tốt, đạt điểm đậu rồi!" : "Cần cố gắng ôn luyện thêm!";
+
+            const reviewContainer = document.getElementById('reviewContainer');
+            reviewContainer.innerHTML = '<h3 class="font-bold text-lg text-slate-800 mt-6 mb-3">Chi tiết kết quả thi thử:</h3>';
+            const labels = ['A', 'B', 'C', 'D'];
+
+            currentQuestions.forEach((q, idx) => {
+                const userOptIdx = userAnswers[idx];
+                const userAnsText = userOptIdx !== undefined ? q.opt[userOptIdx] : "Chưa chọn";
+                const isCorrect = userAnsText === q.ans;
+
+                const card = document.createElement('div');
+                card.className = `p-5 rounded-xl border shadow-sm space-y-2 ${isCorrect ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'}`;
+
+                let optsHtml = q.opt.map((o, i) => {
+                    let style = "bg-slate-50 text-slate-700";
+                    let icon = "";
+                    if (o === q.ans) {
+                        style = "bg-emerald-100 text-emerald-900 font-bold border border-emerald-300";
+                        icon = '<i class="fas fa-check ml-1 text-emerald-600"></i>';
+                    } else if (i === userOptIdx && !isCorrect) {
+                        style = "bg-rose-100 text-rose-900 font-bold border border-rose-300";
+                        icon = '<i class="fas fa-times ml-1 text-rose-600"></i>';
+                    }
+                    return `<div class="p-2 rounded-lg text-sm ${style}">${labels[i]}. ${o} ${icon}</div>`;
+                }).join('');
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center text-xs font-bold">
+                        <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">${q.clo}</span>
+                        <span class="${isCorrect ? 'text-emerald-600' : 'text-rose-600'}"><i class="fas ${isCorrect ? 'fa-check-circle' : 'fa-times-circle'} mr-1"></i> Câu ${idx + 1} (${isCorrect ? 'Đúng' : 'Sai / Bỏ qua'})</span>
+                    </div>
+                    <h4 class="font-bold text-slate-900 text-sm sm:text-base">${q.q}</h4>
+                    <div class="space-y-1.5 pt-1">${optsHtml}</div>
+                    <div class="bg-blue-50 text-blue-900 text-xs p-3 rounded-lg mt-2">
+                        <strong>Giải thích:</strong> ${q.exp}
+                    </div>
+                `;
+                reviewContainer.appendChild(card);
+            });
+        }
+
+        function resetExam() {
+            changeMode();
+        }
+
+        function renderStudyView() {
+            const container = document.getElementById('studyView');
+            container.innerHTML = '';
+            const labels = ['A', 'B', 'C', 'D'];
+
+            currentQuestions.forEach((q, idx) => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3";
+                
+                let optsHtml = q.opt.map((o, i) => {
+                    const isCorrect = o === q.ans;
+                    return `<div class="p-2.5 rounded-lg text-sm ${isCorrect ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-300' : 'bg-slate-50 text-slate-700'}">
+                        ${labels[i]}. ${o} ${isCorrect ? '<i class="fas fa-check ml-1 text-emerald-600"></i>' : ''}
+                    </div>`;
+                }).join('');
+
+                card.innerHTML = `
+                    <div class="flex justify-between items-center text-xs text-slate-500 font-bold">
+                        <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">${q.clo}</span>
+                        <span>Câu ${idx + 1} (Gốc #${q.id})</span>
+                    </div>
+                    <h3 class="font-bold text-slate-900">${q.q}</h3>
+                    <div class="space-y-1.5">${optsHtml}</div>
+                    <div class="bg-blue-50 text-blue-900 text-xs p-3 rounded-lg mt-2">
+                        <strong>Giải thích:</strong> ${q.exp}
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function renderGrid() {
+            const container = document.getElementById('gridContainer');
+            container.innerHTML = '';
+            currentQuestions.forEach((_, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `h-9 w-9 rounded-lg text-xs font-bold flex items-center justify-center border ${
+                    userAnswers[idx] !== undefined ? 'bg-blue-600 text-white border-blue-600' : 'bg-slate-100 text-slate-700 border-slate-200'
+                }`;
+                if (idx === currentIndex) btn.classList.add('ring-2', 'ring-blue-400', 'ring-offset-1');
+                btn.innerText = idx + 1;
+                btn.onclick = () => {
+                    currentIndex = idx;
+                    renderQuestion();
+                    toggleGridModal();
+                };
+                container.appendChild(btn);
+            });
+        }
+
+        function toggleGridModal() {
+            document.getElementById('gridModal').classList.toggle('hidden');
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
